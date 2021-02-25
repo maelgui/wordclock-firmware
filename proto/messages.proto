@@ -1,0 +1,27 @@
+syntax = "proto2";
+
+option java_package = "fr.maelgui.wordclockmanager";
+option java_outer_classname = "MessagesProto";
+
+message Message {
+    optional uint64 value = 1;
+    required Key key = 2;
+
+    enum Key {
+        // RTC
+        TIME = 0;
+        TEMPERATURE = 1;
+        TEMPERATURES = 2;
+        // Function related
+        TIMER = 3;
+        // Settings
+        MODE = 4;
+        FUNCTION = 5;
+        BRIGHTNESS = 6;
+        THRESHOLD = 7;
+        ROTATION = 8;
+        // Response
+        OK = 9;
+        ERROR = 10;
+    }
+}
