@@ -9,7 +9,7 @@
 
 #include "settings.h"
 #include "display.h"
-#include "messages.pb.h"
+#include "messages.h"
 #include "temperature.h"
 
 

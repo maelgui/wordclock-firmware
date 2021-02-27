@@ -1,5 +1,6 @@
 #include "wordclock.h"
-#include "bluetooth.h"
+
+#include <string.h>
 
 
 Settings EEMEM NonVolatileSettings;
@@ -63,7 +64,11 @@ void Wordclock::generate() {
         uint8_t i = eeprom_read_byte(&NonVolatileNextTemperature);
         uint32_t tmp = eeprom_read_dword((uint32_t*) &NonVolatileTemperatures[(i-1) % 120]);
         if (DateTime(tmp).hour() != now.hour()) {
-            Temperature t = { .timestamp = now.unixtime(), .magic = STRUCT_TEMPERATURE_MAGIC, .value = rtc.getTemperatureBytes() };
+            Temperature t = { 
+                .date = { .month = now.month(), .day = now.day(), .hour = now.hour(), .minute = now.minute() }, 
+                .value = rtc.getTemperatureBytes(),
+                .magic = STRUCT_TEMPERATURE_MAGIC, 
+            };
             eeprom_update_block(&t, &NonVolatileTemperatures[i], sizeof(Temperature));
             eeprom_update_byte(&NonVolatileNextTemperature, (i+1) % 120);
         }
@@ -118,93 +123,109 @@ void Wordclock::copy(volatile uint16_t * matrix) {
 
 void Wordclock::process(Message *msg, Message *response) {
 
-    if (msg->has_value) {
-        bool settingsChanges = false;
+    DateTime now = rtc.now();
+
+    if (msg->length != 0) {
+        bool settingsChanged = false;
         
-        switch(msg->key) {
-        case Message_Key_MODE:
-            settings.mode = static_cast<Mode>(msg->value);
-            settingsChanges = true;
+        switch(msg->command) {
+        case Command_MODE:
+            settings.mode = (Mode) msg->message[0];
+            settingsChanged = true;
             break;
-        case Message_Key_FUNCTION:
-            settings.function = static_cast<Function>(msg->value);
-            settingsChanges = true;
+        case Command_FUNCTION:
+            settings.function = (Function) *msg->message;
+            settingsChanged = true;
             break;
-        case Message_Key_TIME:
-            rtc.adjust(DateTime(msg->value));
+        case Command_TIME:
+            rtc.adjust(DateTime(
+                msg->message[0],
+                msg->message[1],
+                msg->message[2],
+                msg->message[3],
+                msg->message[4],
+                msg->message[5]
+            ));
             break;
-        case Message_Key_TIMER:
-            if (msg->value == 0) {
+        case Command_TIMER:
+            if (*msg->message == 0) {
                 settings.function = Function::HOUR;
             }
             else {
-                timerEnd = rtc.now() + TimeSpan(msg->value);
+                timerEnd = rtc.now() + TimeSpan(*msg->message);
                 settings.function = Function::TIMER;
             }
             break;
-        case Message_Key_BRIGHTNESS:
-            settings.brightness = msg->value;
+        case Command_BRIGHTNESS:
+            settings.brightness = *msg->message;
             display.applyBrightness();
-            settingsChanges = true;
+            settingsChanged = true;
             break;
-        case Message_Key_THRESHOLD:
-            settings.lightThreshold = msg->value;
-            settingsChanges = true;
+        case Command_THRESHOLD:
+            settings.lightThreshold = *msg->message;
+            settingsChanged = true;
             break;
-        case Message_Key_ROTATION:
-            settings.rotation = static_cast<Rotation>(msg->value);
-            settingsChanges = true;
+        case Command_ROTATION:
+            settings.rotation = (Rotation) *msg->message;
+            settingsChanged = true;
             break;
         default:
             break;
         }
 
-        if (settingsChanges) {
+        if (settingsChanged) {
             eeprom_update_block(&settings, &NonVolatileSettings, sizeof(Settings));
         }
 
     }
 
-    response->key = msg->key;
-    response->has_value = true;
+    response->command = msg->command;
+    response->length = command_length[response->command];
     
-    switch(msg->key) {
-    case Message_Key_MODE:
-        response->value = static_cast<uint64_t>(settings.mode);
+    switch(msg->command) {
+    case Command_MODE:
+        response->message[0] = static_cast<uint8_t>(settings.mode);
         break;
-    case Message_Key_FUNCTION:
-        response->value = static_cast<uint64_t>(settings.function);
+    case Command_FUNCTION:
+        response->message[0] = (uint8_t) settings.function;
         break;
-    case Message_Key_TIME:
-        response->value = rtc.now().unixtime();
+    case Command_TIME:
+        response->message[0] = now.rawYear();
+        response->message[1] = now.month();
+        response->message[2] = now.day();
+        response->message[3] = now.hour();
+        response->message[4] = now.minute();
+        response->message[5] = now.second();
         break;
-    case Message_Key_TEMPERATURE:
-        response->value = ((uint64_t) rtc.now().unixtime() << 32) + rtc.getTemperatureBytes() ;
+    case Command_TEMPERATURE:
+    {
+        Temperature t = temperature(&now, rtc.getTemperatureBytes());
+        memcpy(response->message, &t, 6);
+    }
         break;
-    case Message_Key_TEMPERATURES:
+    case Command_TEMPERATURES:
         sendTemperatures();
-
-        response->key = Message_Key_OK;
-        response->has_value = false;
+        // TODO: response
         break;
-    case Message_Key_TIMER:
-        response->value = (timerEnd - rtc.now()).totalseconds();
+    case Command_TIMER:
+    {
+        uint16_t remaining = (timerEnd - rtc.now()).totalseconds();
+        memcpy(response->message, &remaining, 2);
+    }
         break;
-    case Message_Key_BRIGHTNESS:
-        response->value = settings.brightness;
+    case Command_BRIGHTNESS:
+        response->message[0] = settings.brightness;
         break;
-    case Message_Key_ROTATION:
-        response->value = static_cast<uint64_t>(settings.rotation);
+    case Command_ROTATION:
+        response->message[0] = (uint8_t) settings.rotation;
         break;
-    case Message_Key_THRESHOLD:
-        response->value = settings.lightThreshold;
+    case Command_THRESHOLD:
+        response->message[0] = settings.lightThreshold;
         break;
     default:
-        response->has_value = false;
-        response->key = Message_Key_ERROR;
+        response->error = Error_UNKNOWN_COMMAND;
         break;
     }
-
 }
 
 void Wordclock::sendTemperatures() {
@@ -214,10 +235,11 @@ void Wordclock::sendTemperatures() {
         eeprom_read_block(&tmp, &NonVolatileTemperatures[i], sizeof(Temperature));
         if (tmp.magic == STRUCT_TEMPERATURE_MAGIC) {
             Message response = { 
-                .has_value = true,
-                .value = ((uint64_t) tmp.timestamp << 32) + tmp.value,
-                .key = Message_Key_TEMPERATURES
+                .error = Error_NONE,
+                .command = Command_TEMPERATURES,
+                .length = sizeof(Temperature),
             };
+            memcpy(response.message, &tmp, 6);
             send_msg(&response);
         }
     }

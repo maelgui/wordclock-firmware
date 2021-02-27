@@ -1,5 +1,5 @@
 # Configure executable firmware
-add_executable(${PROJECT_NAME} main.cc core.cc display.cc wordclock.cc messages.pb.c bluetooth.cc)
+add_executable(${PROJECT_NAME} main.cc core.cc display.cc wordclock.cc temperature.cc messages.cc)
 target_link_libraries(${PROJECT_NAME} nanopb uart rtc wire)
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}.elf")
 

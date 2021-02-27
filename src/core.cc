@@ -11,16 +11,12 @@
 
 #include "pin.h"
 #include "core.h"
-#include "messages.pb.h"
 #include "wordclock.h"
 //#include "version.h"
-#include "bluetooth.h"
+#include "messages.h"
 
 #include <RTClib.h>
 #include <uart.h>
-#include <pb.h>
-#include <pb_encode.h>
-#include <pb_decode.h>
 
 
 struct Screen {
@@ -121,57 +117,19 @@ ISR (TIMER1_COMPA_vect) {
     }
 }
 
-uint64_t uart_getvarint() {
-    uint64_t result = 0;
-    uint8_t i = 0;
-    while (true) {
-        while (!uart_available()) {
-            _delay_us(80);
-        }
-        uint8_t c = uart_getc();
-        result += (c & 0x7F) << (i*7);
-        i++;
-        if ((c & 0x80) == 0) {
-            break;
-        }
-    }
-
-    return result;
-}
-
-bool uart_getmessage(uint64_t length, Message *msg) {
-    uint8_t buffer[256];
-
-    for (uint64_t i = 0; i < length; i++) {
-        while (!uart_available()) {
-            _delay_us(80);
-        }
-        buffer[i] = uart_getc();
-    }
-
-    pb_istream_t stream = pb_istream_from_buffer(buffer, length);
-    bool status = pb_decode(&stream, &Message_msg, msg);
-
-    return status;
-}
 
 void loop(Wordclock *wordclock) {
 
     if (uart_available()) {
-        Message msg = Message_init_zero;
+        Message message, response;
 
-        uint64_t length = uart_getvarint();
-
-        bool status = uart_getmessage(length, &msg);
-
-        Message response = Message_init_zero;
+        bool status = receive_msg(&message);
 
         if (status) {
-            wordclock->process(&msg, &response);
+            wordclock->process(&message, &response);
         }
         else {
-            response.key = Message_Key_ERROR;
-            response.has_value = false;
+            response.error = Error_BAD_PACKET;
         }
 
         send_msg(&response);

@@ -56,6 +56,11 @@ public:
     */
     uint16_t year() const       { return 2000 + yOff; }
     /*!
+        @brief  Return the year, stored as an offset from 2000
+        @return uint16_t year
+    */
+    uint8_t rawYear() const       { return yOff; }
+    /*!
         @brief  Return month
         @return uint8_t month
     */
