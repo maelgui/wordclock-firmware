@@ -36,7 +36,7 @@ const uint16_t command_length [] = {
     [Command_TEMPERATURE] = 2,
     [Command_HUMIDITY] = 2,
     [Command_LIGHT] = 1,
-    [Command_TEMPERATURES] = 8,
+    [Command_TEMPERATURES] = 0,
     // Function related
     [Command_TIMER] = 2,
     // Settings
@@ -52,6 +52,7 @@ enum Error {
     Error_NONE,
     Error_BAD_PACKET,
     Error_UNKNOWN_COMMAND,
+    Error_NOT_IMPLEMENTED,
 };
 
 struct Message {

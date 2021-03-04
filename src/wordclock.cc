@@ -58,7 +58,7 @@ void wordclock_initialise(wordclock_t *w) {
             .mode = SETTINGS_MODE_ON,
             .function = SETTINGS_FUNCTION_ALTERNATE,
             .rotation = SETTINGS_ROTATION_0,
-            .lightThreshold = 100,
+            .lightThreshold = 60,
             .brightness = 255,
         };
 
@@ -71,9 +71,10 @@ void wordclock_initialise(wordclock_t *w) {
 void wordclock_tick(wordclock_t *w, DateTime now) {
     w->now = now;
     if (now.minute() == 0 && now.second() == 0 && w->last_dht_read_ime > now - TimeSpan(120)) {
+        Temperature last;
         uint8_t i = eeprom_read_byte(&NonVolatileNextTemperature);
-        uint32_t tmp = eeprom_read_dword((uint32_t*) &NonVolatileTemperatures[(i-1) % 120]);
-        if (DateTime(tmp).hour() != now.hour()) {
+        eeprom_read_block(&last, &NonVolatileTemperatures[(i-1) % 120], sizeof(Temperature));
+        if (last.date.hour != now.hour() || last.magic != STRUCT_TEMPERATURE_MAGIC) {
             Temperature t = { 
                 .date = { .month = now.month(), .day = now.day(), .hour = now.hour(), .minute = now.minute() }, 
                 .value = w->last_temperature_read_value,
@@ -85,11 +86,24 @@ void wordclock_tick(wordclock_t *w, DateTime now) {
     }
 
 
-    if (w->settings.mode == SETTINGS_MODE_AMBIENT) {
+    switch (w->settings.mode)
+    {
+    case SETTINGS_MODE_OFF:
+        w->is_active = false;
+        break;
+    case SETTINGS_MODE_ON:
+        w->is_active = true;
+        break;
+    case SETTINGS_MODE_AMBIENT:
         w->is_active = w->ambient_light > w->settings.lightThreshold;
-    }
-    else {
-        w->is_active = w->settings.mode == SETTINGS_MODE_ON;
+        break;
+    case SETTINGS_MODE_TIME:
+        w->is_active = now.hour() < 23 && now.hour() >= 8;
+        break;
+    
+    default:
+        w->is_active = false;
+        break;
     }
 
 
@@ -270,7 +284,7 @@ void wordclock_process_message(wordclock_t *w, Message *msg, Message *res) {
         break;
     case Command_TEMPERATURES:
         send_temperatures();
-        // TODO: response
+        res->error = Error_NOT_IMPLEMENTED;
         break;
     case Command_TIMER:
     {

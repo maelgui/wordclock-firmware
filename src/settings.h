@@ -18,7 +18,7 @@ enum class Rotation : uint8_t{
 };
 
 
-#define STRUCT_SETTINGS_MAGIC 0x372f2cfa
+#define STRUCT_SETTINGS_MAGIC 0x371f2cfa
 #define STRUCT_SETTINGS_VERSION 2
 
 
