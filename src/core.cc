@@ -229,9 +229,9 @@ void loop() {
     // --------------------
 
     wordclock_tick(&clock, rtc.now());
-    wordclock_draw(&clock);
+    screen.active = clock.is_active;
     if (wordclock_need_update(&clock, screen.matrix))
-        screen.active = wordclock_screen_update(&clock, screen.matrix);
+        wordclock_screen_update(&clock, screen.matrix);
 
 
     // --------------------

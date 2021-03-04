@@ -24,15 +24,16 @@ typedef struct {
     uint8_t ambient_light;
     // Display
     display_t display;
+    bool is_active;
+    bool force_update;
 } wordclock_t;
 
 
 void wordclock_initialise(wordclock_t *w);
 void wordclock_tick(wordclock_t *w, DateTime now);
-void wordclock_draw(wordclock_t *w);
 
 bool wordclock_need_update(wordclock_t *w, volatile uint16_t *matrix);
-bool wordclock_screen_update(wordclock_t *w, volatile uint16_t *matrix);
+void wordclock_screen_update(wordclock_t *w, volatile uint16_t *matrix);
 
 void wordclock_process_message(wordclock_t *w, Message *msg, Message *res);
 

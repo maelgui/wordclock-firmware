@@ -41,6 +41,7 @@ uint32_t hour_words[12] = {
 };
 
 
+void wordclock_draw(wordclock_t *w);
 void wordclock_write_time(display_t *display, DateTime now);
 void wordclock_write_temperature(display_t *display, uint16_t temperature);
 void wordclock_write_timer(display_t *display, DateTime now, DateTime end);
@@ -83,13 +84,25 @@ void wordclock_tick(wordclock_t *w, DateTime now) {
         }
     }
 
-    if (w->settings.function == SETTINGS_FUNCTION_ALTERNATE) {
-        w->actual_function = (now.minute() % 2 == 0) ? SETTINGS_FUNCTION_TEMPERATURE : SETTINGS_FUNCTION_HOUR;
+
+    if (w->settings.mode == SETTINGS_MODE_AMBIENT) {
+        w->is_active = w->ambient_light > w->settings.lightThreshold;
     }
     else {
-        w->actual_function = w->settings.function;
+        w->is_active = w->settings.mode == SETTINGS_MODE_ON;
     }
 
+
+    if (w->is_active) {
+        if (w->settings.function == SETTINGS_FUNCTION_ALTERNATE) {
+            w->actual_function = (now.minute() % 2 == 0) ? SETTINGS_FUNCTION_TEMPERATURE : SETTINGS_FUNCTION_HOUR;
+        }
+        else {
+            w->actual_function = w->settings.function;
+        }
+
+        wordclock_draw(w);
+    }
 }
 
 void wordclock_draw(wordclock_t *w) {
@@ -107,6 +120,9 @@ void wordclock_draw(wordclock_t *w) {
 }
 
 bool wordclock_need_update(wordclock_t *w, volatile uint16_t *matrix) {
+    if (w->force_update)
+        return true;
+
     uint16_t temp[10];
     display_copy(&w->display, temp, w->settings.rotation);
 
@@ -121,19 +137,12 @@ bool wordclock_need_update(wordclock_t *w, volatile uint16_t *matrix) {
 }
 
 
-bool wordclock_screen_update(wordclock_t *w, volatile uint16_t *matrix) {
-    bool is_active = false;
-    if (w->settings.mode == SETTINGS_MODE_AMBIENT) {
-        is_active = w->ambient_light > w->settings.lightThreshold;
-    }
-    else if (w->settings.mode == SETTINGS_MODE_ON) {
-        is_active = true;
-    }
+void wordclock_screen_update(wordclock_t *w, volatile uint16_t *matrix) {
+    if (w->force_update)
+        w->force_update = false;
+
 
     display_copy(&w->display, matrix, w->settings.rotation);
-    
-    return is_active;
-
 }
 
 void wordclock_write_time(display_t *display, DateTime now) {
@@ -222,6 +231,7 @@ void wordclock_process_message(wordclock_t *w, Message *msg, Message *res) {
         }
 
         if (settingsChanged) {
+            w->force_update = true;
             eeprom_update_block(&w->settings, &NonVolatileSettings, sizeof(settings_t));
         }
 
