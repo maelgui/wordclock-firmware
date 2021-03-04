@@ -7,7 +7,7 @@
 
 #include "wordclock.h"
 
-void setup(Wordclock *wordclock);
-void loop(Wordclock *wordclock);
+void setup();
+void loop();
 
 #endif //FIRMWARE_CORE_H

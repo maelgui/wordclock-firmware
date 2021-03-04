@@ -1,8 +1,6 @@
 #ifndef FIRMWARE_WORDCLOCK_H
 #define FIRMWARE_WORDCLOCK_H
 
-#include <avr/io.h>
-#include <avr/eeprom.h>
 
 
 #include <RTClib.h>
@@ -12,38 +10,31 @@
 #include "messages.h"
 #include "temperature.h"
 
-
-
-class Wordclock
-{
-public:
-    Wordclock();
-
-
-    void initialize();
-
-    bool isActive();
-    void generate();
-    void process(Message * msg, Message * response);
-    void sendTemperatures();
-
-    void writeTime(DateTime &now);
-    void writeTemperature();
-    void writeTimer(DateTime &now);
-
-    void copy(volatile uint16_t * matrix);
-
-private:
+typedef struct {
     // Settings
-    Settings settings;
+    settings_t settings;
+    // State
+    DateTime now;
+    settings_function_t actual_function;
+    DateTime timer_end;
+    // Sensors
+    DateTime last_dht_read_ime;
+    uint16_t last_temperature_read_value;
+    uint16_t last_humidity_read_value;
+    uint8_t ambient_light;
+    // Display
+    display_t display;
+} wordclock_t;
 
-    // Function state
-    DateTime timerEnd;
 
-    // Devices
-    Display display;
-    RTC_DS3231 rtc;
+void wordclock_initialise(wordclock_t *w);
+void wordclock_tick(wordclock_t *w, DateTime now);
+void wordclock_draw(wordclock_t *w);
 
-};
+bool wordclock_need_update(wordclock_t *w, volatile uint16_t *matrix);
+bool wordclock_screen_update(wordclock_t *w, volatile uint16_t *matrix);
+
+void wordclock_process_message(wordclock_t *w, Message *msg, Message *res);
+
 
 #endif // FIRMWARE_WORDCLOCK_H

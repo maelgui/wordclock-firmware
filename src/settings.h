@@ -18,19 +18,47 @@ enum class Rotation : uint8_t{
 };
 
 
-static const uint32_t STRUCT_SETTINGS_MAGIC = 0x362f2cfe;
-static const uint8_t STRUCT_SETTINGS_VERSION = 2;
+#define STRUCT_SETTINGS_MAGIC 0x372f2cfa
+#define STRUCT_SETTINGS_VERSION 2
 
-struct Settings {
+
+typedef enum {
+    SETTINGS_MODE_ERROR,
+    SETTINGS_MODE_OFF,
+    SETTINGS_MODE_ON,
+    SETTINGS_MODE_TIME,
+    SETTINGS_MODE_AMBIENT,
+} settings_mode_t;
+
+
+typedef enum {
+    SETTINGS_FUNCTION_ERROR,
+    SETTINGS_FUNCTION_HOUR,
+    SETTINGS_FUNCTION_TEMPERATURE,
+    SETTINGS_FUNCTION_TIMER,
+    SETTINGS_FUNCTION_ALTERNATE,
+} settings_function_t;
+
+
+typedef enum {
+    SETTINGS_ROTATION_0,
+    SETTINGS_ROTATION_90,
+    SETTINGS_ROTATION_180,
+    SETTINGS_ROTATION_270,
+} settings_rotation_t;
+
+
+typedef struct {
     // EEPROM related
     uint32_t magic;
     uint8_t version;
     // Settings
-    Mode mode;
-    Function function;
-    Rotation rotation;
+    settings_mode_t mode;
+    settings_function_t function;
+    settings_rotation_t rotation;
     uint8_t lightThreshold;
     uint8_t brightness;
-};
+} settings_t;
+
 
 #endif // FIRMWARE_SETTINGS_H

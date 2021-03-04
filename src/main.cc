@@ -7,11 +7,9 @@
 
 int main(void)
 {
-    Wordclock wordclock;
-
-    setup(&wordclock);
+    setup();
     while (1) {
-        loop(&wordclock);
+        loop();
     }
 
     return 0;

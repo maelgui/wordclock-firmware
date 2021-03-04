@@ -7,10 +7,13 @@
 
 
 enum Command  {
+    Command_ERROR,
     Command_VERSION,
     // RTC
     Command_TIME,
     Command_TEMPERATURE,
+    Command_HUMIDITY,
+    Command_LIGHT,
     Command_TEMPERATURES,
     // Function related
     Command_TIMER,
@@ -26,13 +29,16 @@ enum Command  {
 
 
 const uint16_t command_length [] = {
+    [Command_ERROR] = 0,
     [Command_VERSION] = 0,
     // RTC
     [Command_TIME] = 6,
-    [Command_TEMPERATURE] = 8,
+    [Command_TEMPERATURE] = 2,
+    [Command_HUMIDITY] = 2,
+    [Command_LIGHT] = 1,
     [Command_TEMPERATURES] = 8,
     // Function related
-    [Command_TIMER] = 4,
+    [Command_TIMER] = 2,
     // Settings
     [Command_MODE] = 1,
     [Command_FUNCTION] = 1,

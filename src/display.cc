@@ -3,115 +3,7 @@
 #include "display.h"
 
 
-Display::Display() { }
-
-Display::Display(Settings *settings) : settings(settings) {}
-
-
-void Display::writeTime(uint8_t hour, uint8_t minute) {
-    if(minute >= 35)
-        hour = (hour + 1) % 24;
-
-    matrix[0] = 59; // il est
-    matrix[6] = 63; // heures
-
-    switch ((minute / 5) * 5)
-    {
-    case 0:
-        break;
-    case 5:
-        matrix[9] = 60;
-        break;
-    case 10:
-        matrix[7] = 896;
-        break;
-    case 15:
-        matrix[7] = 96;
-        matrix[9] = 992;
-        break;
-    case 20:
-        matrix[8] = 31;
-        break;
-    case 25:
-        matrix[8] = 31;
-        matrix[9] = 60;
-        break;
-    case 30:
-        matrix[7] = 96;
-        matrix[8] = 480;
-        break;
-    case 35:
-        matrix[7] = 31;
-        matrix[8] = 31;
-        matrix[9] = 60;
-        break;
-    case 40:
-        matrix[7] = 31;
-        matrix[8] = 31;
-        break;
-    case 45:
-        matrix[7] = 31;
-        matrix[9] = 3 + 992;
-        break;
-    case 50:
-        matrix[7] = 31 + 896;
-        break;
-    case 55:
-        matrix[7] = 31;
-        matrix[9] = 60;
-        break;
-
-    default:
-        break;
-    }
-
-    switch (hour % 12) {
-    case 0:
-        if (hour == 12) {
-            matrix[6] = 960;
-        }
-        else {
-            matrix[5] = 1008;
-            matrix[6] = 0;
-        }
-        break;
-    case 1:
-        matrix[1] = 7;
-        break;
-    case 2:
-        matrix[4] = 240;
-        break;
-    case 3:
-        matrix[2] = 248;
-        break;
-    case 4:
-        matrix[3] = 504;
-        break;
-    case 5:
-        matrix[3] = 15;
-        break;
-    case 6:
-        matrix[2] = 896;
-        break;
-    case 7:
-        matrix[1] = 960;
-        break;
-    case 8:
-        matrix[2] = 15;
-        break;
-    case 9:
-        matrix[4] = 15;
-        break;
-    case 10:
-        matrix[1] = 56;
-        break;
-    case 11:
-        matrix[5] = 15;
-        break;
-    }
-}
-
-int numbers[10][10] = {
+static int numbers[10][10] = {
     {0,0,6,9,9,9,9,9,6,0},
     {0,0,4,4,4,4,4,4,4,0},
     {0,0,6,9,8,6,1,1,15,0},
@@ -124,49 +16,81 @@ int numbers[10][10] = {
     {0,0,6,9,9,14,8,8,8,0},
 };
 
-void Display::writeNumber(uint8_t n) {
-    uint8_t u = n%10;
-    uint8_t d = n/10;
-    for(uint8_t i = 0; i<10; i++) {
-        matrix[i] = 32*numbers[u][i] + numbers[d][i];
-    }
+void display_apply_brightness(uint8_t brightness) {
+    OCR2B = brightness;
 }
 
-void Display::clear() {
+void display_clear(display_t *display) {
     for (int i = 0; i < 10; ++i) {
-        matrix[i] = 0;
+        display->line[i] = 0;
     }
 }
 
-void Display::copy(volatile uint16_t *dst) {
-    switch (settings->rotation)
+void display_write_time(display_t *display, display_time_t time) {
+    display_clear(display);
+
+    if (time & DISPLAY_WORD_IL)     display->line[0] |= 0b11;
+    if (time & DISPLAY_WORD_EST)    display->line[0] |= 0b111000;
+    if (time & DISPLAY_WORD_BABO)   display->line[0] |= 0b1111000000;
+    if (time & DISPLAY_WORD_UNE)    display->line[1] |= 0b111;
+    if (time & DISPLAY_WORD_DIX)    display->line[1] |= 0b111000;
+    if (time & DISPLAY_WORD_SEPT)   display->line[1] |= 0b1111000000;
+    if (time & DISPLAY_WORD_HUIT)   display->line[2] |= 0b1111;
+    if (time & DISPLAY_WORD_TROIS)  display->line[2] |= 0b11111000;
+    if (time & DISPLAY_WORD_SIX)    display->line[2] |= 0b1110000000;
+    if (time & DISPLAY_WORD_CINQ)   display->line[3] |= 0b1111;
+    if (time & DISPLAY_WORD_QUATRE) display->line[3] |= 0b111111000;
+    if (time & DISPLAY_WORD_NEUF)   display->line[4] |= 0b1111;
+    if (time & DISPLAY_WORD_DEUX)   display->line[4] |= 0b11110000;
+    if (time & DISPLAY_WORD_ONZE)   display->line[5] |= 0b1111;
+    if (time & DISPLAY_WORD_MINUIT) display->line[5] |= 0b1111110000;
+    if (time & DISPLAY_WORD_HEURES) display->line[6] |= 0b111111;
+    if (time & DISPLAY_WORD_MIDI)   display->line[6] |= 0b1111000000;
+    if (time & DISPLAY_WORD_MOINS)  display->line[7] |= 0b11111;
+    if (time & DISPLAY_WORD_ET)     display->line[7] |= 0b1100000;
+    if (time & DISPLAY_WORD_DIX2)   display->line[7] |= 0b1110000000;
+    if (time & DISPLAY_WORD_VINGT)  display->line[8] |= 0b11111;
+    if (time & DISPLAY_WORD_DEMI)   display->line[8] |= 0b111100000;
+    if (time & DISPLAY_WORD_LE)     display->line[9] |= 0b11;
+    if (time & DISPLAY_WORD_CINQ2)  display->line[9] |= 0b111100;
+    if (time & DISPLAY_WORD_QUART)  display->line[9] |= 0b1111100000;
+}
+
+void display_write_number(display_t *display, uint8_t number) {
+    uint8_t u = number % 10;
+    uint8_t d = (number / 10) % 10;
+    for(uint8_t i = 0; i < 10; i++) {
+        display->line[i] = 32*numbers[u][i] + numbers[d][i];
+    }
+}
+
+void display_copy(display_t *display, volatile uint16_t *dst, settings_rotation_t rotation) {
+    switch (rotation)
     {
-    case Rotation::ROT_0:
+    case SETTINGS_ROTATION_0:
         for (int k = 0; k < 10; ++k) {
-            dst[k] = matrix[k];
+            dst[k] = display->line[k];
         }
         break;
     
-    case Rotation::ROT_90:
+    case SETTINGS_ROTATION_90:
         for (uint8_t k = 0; k < 10; k++)
         {
             dst[k] = 0;
             for (uint8_t t = 0; t < 10; t++)
             {
-                //cli();
-                dst[k] |= ((matrix[t] >> k) & 1) << (10 - t - 1) ;
-                //sei();
+                dst[k] |= ((display->line[t] >> k) & 1) << (10 - t - 1) ;
             }
         }
         break;
 
-    case Rotation::ROT_180:
+    case SETTINGS_ROTATION_180:
         for (uint8_t k = 0; k < 10; k++)
         {
             dst[10 - k - 1] = 0;
             for (uint8_t t = 0; t < 10; t++)
             {
-                dst[10 - k - 1] |= ((matrix[k] >> t) & 1) << (10 - t -1);
+                dst[10 - k - 1] |= ((display->line[k] >> t) & 1) << (10 - t -1);
             }
         }
         break;
@@ -174,13 +98,5 @@ void Display::copy(volatile uint16_t *dst) {
     default:
         break;
     }
-}
 
-void Display::applyBrightness() {
-    // Set duty cycle
-    OCR2B = settings->brightness;
-}
-
-uint16_t& Display::operator[] (size_t i) {
-    return matrix[i];
 }
