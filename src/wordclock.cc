@@ -7,8 +7,10 @@
 
 // Constants
 settings_t EEMEM NonVolatileSettings;
-Temperature EEMEM NonVolatileTemperatures[120];
+temperature_t EEMEM NonVolatileTemperatures[120];
 uint8_t EEMEM NonVolatileNextTemperature;
+
+extern RTC_DS3231 rtc;
 
 uint32_t minute_words[12] = {
     0,
@@ -51,10 +53,9 @@ void send_temperatures();
 void wordclock_initialise(wordclock_t *w) {
     settings_t *settings = &w->settings;
     eeprom_read_block(settings, &NonVolatileSettings, sizeof(settings_t));
-    if (settings->magic != STRUCT_SETTINGS_MAGIC || settings->version != STRUCT_SETTINGS_VERSION) {
+    if (settings->magic != STRUCT_SETTINGS_MAGIC) {
         *settings = { 
             .magic = STRUCT_SETTINGS_MAGIC,
-            .version = STRUCT_SETTINGS_VERSION,
             .mode = SETTINGS_MODE_ON,
             .function = SETTINGS_FUNCTION_ALTERNATE,
             .rotation = SETTINGS_ROTATION_0,
@@ -70,17 +71,22 @@ void wordclock_initialise(wordclock_t *w) {
 
 void wordclock_tick(wordclock_t *w, DateTime now) {
     w->now = now;
-    if (now.minute() == 0 && now.second() == 0 && w->last_dht_read_ime > now - TimeSpan(120)) {
-        Temperature last;
+    if (now.minute() == 0 && now.second() == 0 && w->last_dht_read_time > now - TimeSpan(DHT_VALIDITY_LIMIT)) {
+        temperature_t last;
         uint8_t i = eeprom_read_byte(&NonVolatileNextTemperature);
-        eeprom_read_block(&last, &NonVolatileTemperatures[(i-1) % 120], sizeof(Temperature));
-        if (last.date.hour != now.hour() || last.magic != STRUCT_TEMPERATURE_MAGIC) {
-            Temperature t = { 
-                .date = { .month = now.month(), .day = now.day(), .hour = now.hour(), .minute = now.minute() }, 
-                .value = w->last_temperature_read_value,
+        eeprom_read_block(&last, &NonVolatileTemperatures[(i-1) % 120], sizeof(temperature_t));
+        if (last.value.hour != now.hour() || last.magic != STRUCT_TEMPERATURE_MAGIC) {
+            temperature_t t = { 
+                .value = { 
+                    .month = now.month(), 
+                    .day = now.day(), 
+                    .hour = now.hour(), 
+                    .minute = now.minute(),
+                    .value = w->last_temperature_read_value
+                 }, 
                 .magic = STRUCT_TEMPERATURE_MAGIC, 
             };
-            eeprom_update_block(&t, &NonVolatileTemperatures[i], sizeof(Temperature));
+            eeprom_update_block(&t, &NonVolatileTemperatures[i], sizeof(temperature_t));
             eeprom_update_byte(&NonVolatileNextTemperature, (i+1) % 120);
         }
     }
@@ -129,6 +135,8 @@ void wordclock_draw(wordclock_t *w) {
         break;
     case SETTINGS_FUNCTION_TIMER:
         wordclock_write_timer(&w->display, w->now, w->timer_end);
+        break;
+    default:
         break;
     }
 }
@@ -312,15 +320,15 @@ void wordclock_process_message(wordclock_t *w, Message *msg, Message *res) {
 void send_temperatures() {
     for (uint8_t i = 0; i < 120; i++)
     {
-        Temperature tmp;
-        eeprom_read_block(&tmp, &NonVolatileTemperatures[i], sizeof(Temperature));
+        temperature_t tmp;
+        eeprom_read_block(&tmp, &NonVolatileTemperatures[i], sizeof(temperature_t));
         if (tmp.magic == STRUCT_TEMPERATURE_MAGIC) {
             Message response = { 
                 .error = Error_NONE,
                 .command = Command_TEMPERATURES,
-                .length = sizeof(Temperature),
+                .length = sizeof(temperature_value_t),
             };
-            memcpy(response.message, &tmp, 6);
+            memcpy(response.message, &tmp.value, sizeof(temperature_value_t));
             send_msg(&response);
         }
     }

@@ -18,7 +18,7 @@ typedef struct {
     settings_function_t actual_function;
     DateTime timer_end;
     // Sensors
-    DateTime last_dht_read_ime;
+    DateTime last_dht_read_time;
     uint16_t last_temperature_read_value;
     uint16_t last_humidity_read_value;
     uint8_t ambient_light;

@@ -19,7 +19,9 @@ enum class Rotation : uint8_t{
 
 
 #define STRUCT_SETTINGS_MAGIC 0x371f2cfa
-#define STRUCT_SETTINGS_VERSION 2
+
+// Number of second DHT values are valid
+#define DHT_VALIDITY_LIMIT 120
 
 
 typedef enum {
@@ -51,7 +53,6 @@ typedef enum {
 typedef struct {
     // EEPROM related
     uint32_t magic;
-    uint8_t version;
     // Settings
     settings_mode_t mode;
     settings_function_t function;

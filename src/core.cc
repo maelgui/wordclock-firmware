@@ -181,11 +181,6 @@ ISR (PCINT1_vect)
     }  
 }
 
-void dht_callback(uint16_t temperature, uint16_t humidity) {
-    clock.last_dht_read_ime = rtc.now();
-    clock.last_temperature_read_value = temperature;
-    clock.last_humidity_read_value = humidity;
-}
 
 void loop() {
 
@@ -250,10 +245,17 @@ void loop() {
     // --------------------
 
     if (dht.state() == DHT22::Done && dht.lastResult() == DHT22::Ok) {
-        clock.last_dht_read_ime = rtc.now();
+        clock.last_dht_read_time = rtc.now();
         clock.last_temperature_read_value = dht.getTemp();
         clock.last_humidity_read_value = dht.getHumidity();
     }
-    dht.startRead();
+    else if ((dht.state() == DHT22::Done || dht.state() == DHT22::Invalid)) {
+        dht.startRead();
+    }
+    else if (clock.last_dht_read_time > rtc.now() - TimeSpan(DHT_VALIDITY_LIMIT)) {
+        clock.last_dht_read_time = rtc.now();
+        clock.last_temperature_read_value = rtc.getTemperature() * 10;
+        clock.last_humidity_read_value = -1;
+    }
 
 }
