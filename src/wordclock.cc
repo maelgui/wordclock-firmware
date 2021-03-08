@@ -218,6 +218,16 @@ void wordclock_process_message(wordclock_t *w, Message *msg, Message *res) {
         bool settingsChanged = false;
         
         switch(msg->command) {
+        case Command_TIME:
+            rtc.adjust(DateTime(
+                msg->message[0] + 2000,
+                msg->message[1],
+                msg->message[2],
+                msg->message[3],
+                msg->message[4],
+                msg->message[5]
+            ));
+            break;
         case Command_MODE:
             w->settings.mode = (settings_mode_t) msg->message[0];
             settingsChanged = true;

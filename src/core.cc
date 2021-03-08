@@ -194,22 +194,7 @@ void loop() {
         bool status = receive_msg(&msg);
 
         if (status) {
-            if (msg.command == Command_TIME) {
-                rtc.adjust(DateTime(
-                    msg.message[0],
-                    msg.message[1],
-                    msg.message[2],
-                    msg.message[3],
-                    msg.message[4],
-                    msg.message[5]
-                ));
-                res.error = Error_NONE;
-                res.command = Command_TIME;
-                res.length = 0;
-            }
-            else {
-                wordclock_process_message(&clock, &msg, &res);
-            }
+            wordclock_process_message(&clock, &msg, &res);
         }
         else {
             res.error = Error_BAD_PACKET;
