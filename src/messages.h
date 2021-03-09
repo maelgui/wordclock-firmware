@@ -31,7 +31,7 @@ enum Command  {
 
 const uint16_t command_length [] = {
     [Command_ERROR] = 0,
-    [Command_VERSION] = 0,
+    [Command_VERSION] = 2,
     // RTC
     [Command_TIME] = 6,
     [Command_LAST_TEMPERATURE] = 2,

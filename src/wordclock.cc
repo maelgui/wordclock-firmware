@@ -276,7 +276,8 @@ void wordclock_process_message(wordclock_t *w, Message *msg, Message *res) {
     
     switch(msg->command) {
     case Command_VERSION:
-        //res->message[0] = FIRMWARE_VERSION_MAJOR;
+        res->message[0] = FIRMWARE_VERSION_MAJOR;
+        res->message[1] = FIRMWARE_VERSION_MINOR;
         break;
     case Command_MODE:
         res->message[0] = (uint8_t) w->settings.mode;

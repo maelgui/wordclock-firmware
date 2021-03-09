@@ -23,7 +23,7 @@ add_compile_definitions(F_CPU=${F_CPU} MCU=${MCU})
 
 
 # set the project name
-project(firmware VERSION 1.0)
+project(firmware VERSION 1.1)
 
 add_subdirectory(lib)
 SET(SOURCE_DIR src)
