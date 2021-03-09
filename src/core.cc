@@ -198,6 +198,8 @@ void loop() {
         }
         else {
             res.error = Error_BAD_PACKET;
+            res.command = msg.command;
+            res.length = 0;
         }
 
         send_msg(&res);
@@ -208,7 +210,8 @@ void loop() {
     // Wordclock tick and draw
     // --------------------
 
-    wordclock_tick(&clock, rtc.now());
+    DateTime now = rtc.now();
+    wordclock_tick(&clock, now);
     screen.active = clock.is_active;
     if (wordclock_need_update(&clock, screen.matrix))
         wordclock_screen_update(&clock, screen.matrix);
@@ -229,18 +232,24 @@ void loop() {
     // DHT22 sensor
     // --------------------
 
-    if (dht.state() == DHT22::Done && dht.lastResult() == DHT22::Ok) {
-        clock.last_dht_read_time = rtc.now();
-        clock.last_temperature_read_value = dht.getTemp();
-        clock.last_humidity_read_value = dht.getHumidity();
+    if (dht.state() == DHT22::Done &&
+        dht.lastResult() == DHT22::Ok &&
+        dht.lastResultToken() != clock.last_dht_time)
+    {
+        clock.last_dht_time = dht.lastResultToken();
+        clock.temperature = dht.getTemp();
+        clock.humidity = dht.getHumidity();
     }
-    else if ((dht.state() == DHT22::Done || dht.state() == DHT22::Invalid)) {
-        dht.startRead();
+    else if (dht.lastResultToken() < now.unixtime() - DHT_DELAY_REFRESH)
+    {
+        if (dht.tryReset()) {
+           dht.startRead(now.unixtime());
+        }
+        _delay_ms(10);
     }
-    else if (clock.last_dht_read_time > rtc.now() - TimeSpan(DHT_VALIDITY_LIMIT)) {
-        clock.last_dht_read_time = rtc.now();
-        clock.last_temperature_read_value = rtc.getTemperature() * 10;
-        clock.last_humidity_read_value = -1;
+    else if (dht.lastResultToken() < now.unixtime() - DHT_DELAY_INVALID) {
+        clock.last_dht_time = now.unixtime();
+        clock.temperature = rtc.getTemperature() * 10;
+        clock.humidity = -1;
     }
-
 }

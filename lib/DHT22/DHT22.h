@@ -88,9 +88,20 @@ public:
      */
     bool startRead();
     /*!
+     * \brief Wakes up the sensor and starts waiting for data
+     * \param startToken Token saved on after reading started
+     * \return Whether the reading was started
+     */
+    bool startRead(uint64_t startToken);
+    /*!
      * \brief Starts reading, if necessary, and waits for result
      * \return The reading result
      */
+    /*!
+     * \brief Reset the sensor status
+     */
+    bool tryReset();
+
     Result blockingRead();
     /*!
      * \brief The last temperature reading
@@ -110,6 +121,10 @@ public:
      * \brief The result of the last reading
      */
     Result lastResult();
+    /*!
+     * \brief The token associated to the last reading
+     */
+    uint64_t lastResultToken();
 private:
     int _pin;
     volatile Status  _state;
@@ -118,6 +133,8 @@ private:
     volatile uint8_t _bit;
     volatile uint8_t _byte;
     volatile unsigned long _lastEdge;
+    volatile uint64_t _startToken;
+    volatile uint64_t _resultToken;
     volatile uint16_t _humidity;
     volatile int16_t _temp;
 };

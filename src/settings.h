@@ -21,7 +21,8 @@ enum class Rotation : uint8_t{
 #define STRUCT_SETTINGS_MAGIC 0x371f2cfa
 
 // Number of second DHT values are valid
-#define DHT_VALIDITY_LIMIT 120
+#define DHT_DELAY_REFRESH 60
+#define DHT_DELAY_INVALID 120
 
 
 typedef enum {

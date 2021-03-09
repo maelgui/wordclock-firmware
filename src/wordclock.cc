@@ -71,7 +71,8 @@ void wordclock_initialise(wordclock_t *w) {
 
 void wordclock_tick(wordclock_t *w, DateTime now) {
     w->now = now;
-    if (now.minute() == 0 && now.second() == 0 && w->last_dht_read_time > now - TimeSpan(DHT_VALIDITY_LIMIT)) {
+    if (now.minute() == 0 && now.second() == 0 && 
+        w->last_dht_time > now.unixtime() - DHT_DELAY_INVALID) {
         temperature_t last;
         uint8_t i = eeprom_read_byte(&NonVolatileNextTemperature);
         eeprom_read_block(&last, &NonVolatileTemperatures[(i-1) % 120], sizeof(temperature_t));
@@ -82,7 +83,7 @@ void wordclock_tick(wordclock_t *w, DateTime now) {
                     .day = now.day(), 
                     .hour = now.hour(), 
                     .minute = now.minute(),
-                    .value = w->last_temperature_read_value
+                    .value = w->temperature
                  }, 
                 .magic = STRUCT_TEMPERATURE_MAGIC, 
             };
@@ -131,7 +132,7 @@ void wordclock_draw(wordclock_t *w) {
         wordclock_write_time(&w->display, w->now);
         break;
     case SETTINGS_FUNCTION_TEMPERATURE:
-        wordclock_write_temperature(&w->display, w->last_temperature_read_value);
+        wordclock_write_temperature(&w->display, w->temperature);
         break;
     case SETTINGS_FUNCTION_TIMER:
         wordclock_write_timer(&w->display, w->now, w->timer_end);
@@ -291,11 +292,19 @@ void wordclock_process_message(wordclock_t *w, Message *msg, Message *res) {
         res->message[4] = w->now.minute();
         res->message[5] = w->now.second();
         break;
-    case Command_TEMPERATURE:
-        memcpy(res->message, &w->last_temperature_read_value, 2);
+    case Command_LAST_TEMPERATURE:
+        memcpy(res->message, &w->temperature, 2);
+        break;
+    case Command_LAST_TEMPERATURE_TIME:
+        {
+            DateTime last(w->last_dht_time);
+            res->message[0] = last.hour();
+            res->message[1] = last.minute();
+            res->message[2] = last.second();
+        }
         break;
     case Command_HUMIDITY:
-        memcpy(res->message, &w->last_humidity_read_value, 2);
+        memcpy(res->message, &w->humidity, 2);
         break;
     case Command_LIGHT:
         res->message[0] = w->ambient_light;

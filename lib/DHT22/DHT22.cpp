@@ -38,9 +38,9 @@ namespace WakeUp {
     const uint16_t max = 190;
 }
 namespace Bit {
-    const uint16_t min = 60;
+    const uint16_t min = 40;
     const uint16_t threshold = 100;
-    const uint16_t max = 145;
+    const uint16_t max = 165;
 }
 }
 
@@ -77,9 +77,11 @@ ISR (TIMER0_OVF_vect) {
 }
 
 
-
-
 bool DHT22::startRead() {
+    startRead(0);
+}
+
+bool DHT22::startRead(uint64_t startToken) {
     if (_state == Invalid || _state == Done) {
         for (uint8_t i=0; i< sizeof(_data); i++) {
             _data[i] = 0;
@@ -103,6 +105,7 @@ bool DHT22::startRead() {
 
 
         _lastEdge = micros();
+        _startToken = startToken;
         _state = WakingUp;
         return true;
     }
@@ -113,6 +116,15 @@ DHT22::Result DHT22::blockingRead() {
     startRead();
     while((_state != Done && _state != Invalid)){}
     return lastResult();
+}
+
+bool DHT22::tryReset() {
+    if (micros() - _lastEdge > 5000) {
+        _state = Invalid;
+        _result = None;
+        return true;
+    }
+    return false;
 }
 
 uint16_t DHT22::onFallingEdge() {
@@ -144,6 +156,7 @@ uint16_t DHT22::onFallingEdge() {
                         if (_data[2] & 0x80) _temp = -_temp;
                         _result = Ok;
                         _state = Done;
+                        _resultToken = _startToken;
                     }
                     break;
                 }
@@ -166,6 +179,10 @@ DHT22::Status DHT22::state() {
 
 DHT22::Result DHT22::lastResult() {
     return _result;
+}
+
+uint64_t DHT22::lastResultToken() {
+    return _resultToken;
 }
 
 int16_t DHT22::getTemp() {

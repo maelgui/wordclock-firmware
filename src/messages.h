@@ -11,7 +11,8 @@ enum Command  {
     Command_VERSION,
     // RTC
     Command_TIME,
-    Command_TEMPERATURE,
+    Command_LAST_TEMPERATURE,
+    Command_LAST_TEMPERATURE_TIME,
     Command_HUMIDITY,
     Command_LIGHT,
     Command_TEMPERATURES,
@@ -33,7 +34,8 @@ const uint16_t command_length [] = {
     [Command_VERSION] = 0,
     // RTC
     [Command_TIME] = 6,
-    [Command_TEMPERATURE] = 2,
+    [Command_LAST_TEMPERATURE] = 2,
+    [Command_LAST_TEMPERATURE_TIME] = 3,
     [Command_HUMIDITY] = 2,
     [Command_LIGHT] = 1,
     [Command_TEMPERATURES] = 0,
