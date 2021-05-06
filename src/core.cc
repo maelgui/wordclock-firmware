@@ -229,9 +229,10 @@ void loop() {
 
 
     // --------------------
-    // DHT22 sensor
+    // Temperature sensor
     // --------------------
 
+    #if TEMPERATURE_SENSOR == SENSOR_DHT22
     if (dht.state() == DHT22::Done &&
         dht.lastResult() == DHT22::Ok &&
         dht.lastResultToken() != clock.last_dht_time)
@@ -252,4 +253,13 @@ void loop() {
         clock.temperature = rtc.getTemperature() * 10;
         clock.humidity = -1;
     }
+    #elif TEMPERATURE_SENSOR == SENSOR_DS3231
+    if (clock.last_dht_time < now.unixtime() - DHT_DELAY_REFRESH) {
+        clock.last_dht_time = now.unixtime();
+        clock.temperature = rtc.getTemperature() * 10;
+        clock.humidity = -1;
+    }
+    #endif
+
+
 }

@@ -305,7 +305,12 @@ void wordclock_process_message(wordclock_t *w, Message *msg, Message *res) {
         }
         break;
     case Command_HUMIDITY:
+        #if TEMPERATURE_SENSOR == SENSOR_DHT22
         memcpy(res->message, &w->humidity, 2);
+        #elif TEMPERATURE_SENSOR == SENSOR_DS3231
+        res->error= Error_NOT_IMPLEMENTED;
+        res->length = 0;
+        #endif
         break;
     case Command_LIGHT:
         res->message[0] = w->ambient_light;

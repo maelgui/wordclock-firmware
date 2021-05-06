@@ -24,6 +24,10 @@ enum class Rotation : uint8_t{
 #define DHT_DELAY_REFRESH 60
 #define DHT_DELAY_INVALID 120
 
+#define SENSOR_DHT22 1
+#define SENSOR_DS3231 2
+#define TEMPERATURE_SENSOR SENSOR_DS3231
+
 
 typedef enum {
     SETTINGS_MODE_ERROR,
